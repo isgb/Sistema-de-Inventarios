@@ -1,17 +1,101 @@
-# React + Vite
+# InvenSys — Sistema de Inventarios Empresarial
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend de un Sistema de Gestion de Inventarios Empresarial con autenticacion JWT, dashboard de estadisticas, gestion de productos y registro de actividad.
 
-Currently, two official plugins are available:
+Aplicacion SPA con React 19 y Vite, UI con Bootstrap 5, arquitectura modular lista para conectar con backend REST.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+| Tecnologia       | Uso                                |
+| ---------------- | ---------------------------------- |
+| React 19         | UI / componentes                   |
+| Vite 8           | Build tool / dev server            |
+| React Router 7   | Navegacion SPA / rutas protegidas  |
+| Bootstrap 5      | Estilos y componentes UI           |
+| Bootstrap Icons  | Iconografia                        |
+| React Hot Toast  | Notificaciones toast               |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Estructura del proyecto
 
-## Expanding the ESLint configuration
+```text
+frontend/src/
+├── components/
+│   ├── common/
+│   │   └── PrivateRoute.jsx        # Guardia de rutas autenticadas
+│   └── layout/
+│       ├── AppLayout.jsx            # Layout: Navbar + Sidebar + Outlet
+│       ├── Navbar.jsx               # Barra superior con avatar y logout
+│       └── Sidebar.jsx              # Menu lateral colapsable
+├── context/
+│   └── AuthContext.jsx              # Provider global de autenticacion
+├── hooks/
+│   └── useAuth.js                   # Hook para consumir AuthContext
+├── pages/
+│   ├── LoginPage.jsx                # Inicio de sesion
+│   ├── RegisterPage.jsx             # Registro de usuario
+│   ├── DashboardPage.jsx            # Panel con stats y actividad reciente
+│   ├── ProductsPage.jsx             # Listado de productos con filtros
+│   └── CreateProductPage.jsx        # Formulario de nuevo producto
+├── services/
+│   ├── api.js                       # Cliente HTTP con inyeccion de JWT
+│   ├── auth.service.js              # Autenticacion (mock / API)
+│   ├── product.service.js           # CRUD de productos (mock / API)
+│   └── activity.service.js          # Registro de actividad en localStorage
+├── styles/
+│   └── global.css                   # Variables CSS y estilos globales
+├── App.jsx                          # Definicion de rutas
+└── main.jsx                         # Entry point
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-"# Sistema-de-Inventarios" 
+## Funcionalidades
+
+- **Autenticacion**: Login, registro, JWT en localStorage, logout, rutas protegidas
+- **Dashboard**: 6 tarjetas de estadisticas, actividad reciente, accesos rapidos
+- **Productos**: Tabla con busqueda por nombre/SKU, filtro por categoria, eliminacion
+- **Crear producto**: Formulario con validacion (nombre, SKU, categoria, precio, stock)
+- **Layout**: Navbar fija + sidebar colapsable, responsive
+
+## Credenciales Demo
+
+| Email                  | Contrasena | Rol     |
+| ---------------------- | ---------- | ------- |
+| admin@inventario.com   | 123456     | Admin   |
+| demo@inventario.com    | 123456     | Usuario |
+
+## Getting Started
+
+```bash
+cd frontend
+npm install
+npm run dev
+npm run build
+```
+
+### Requisitos
+
+- Node.js 18+
+- npm
+
+## Conectar con Backend
+
+1. Cambiar `USE_MOCK = false` en `auth.service.js` y `product.service.js`
+2. Crear `.env` basado en `.env.example`:
+   ```
+   VITE_API_URL=http://localhost:5000/api
+   ```
+
+### Endpoints esperados
+
+| Metodo   | Endpoint              | Descripcion              |
+| -------- | --------------------- | ------------------------ |
+| POST     | /api/auth/login       | Iniciar sesion           |
+| POST     | /api/auth/register    | Registrar usuario        |
+| GET      | /api/products         | Listar productos         |
+| POST     | /api/products         | Crear producto           |
+| PUT      | /api/products/:id     | Actualizar producto      |
+| DELETE   | /api/products/:id     | Eliminar producto        |
+| GET      | /api/products/stats   | Estadisticas inventario  |
+
+## Licencia
+
+MIT
