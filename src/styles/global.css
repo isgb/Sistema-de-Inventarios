@@ -1,0 +1,305 @@
+/* ========================================
+   Sistema de Inventarios Empresarial
+   Estilos globales
+   ======================================== */
+
+:root {
+  --sidebar-width: 250px;
+  --navbar-height: 56px;
+  --color-primary: #2c3e50;
+  --color-secondary: #34495e;
+  --color-accent: #3498db;
+  --color-success: #27ae60;
+  --color-warning: #f39c12;
+  --color-danger: #e74c3c;
+  --color-bg: #f4f6f9;
+  --color-card: #ffffff;
+  --color-text: #2c3e50;
+  --color-text-muted: #7f8c8d;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --radius: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+/* ---- Layout principal ---- */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding-top: var(--navbar-height);
+  transition: margin-left 0.3s ease;
+}
+
+.main-content.expanded {
+  margin-left: 0;
+}
+
+.page-container {
+  padding: 1.5rem;
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  width: var(--sidebar-width);
+  height: calc(100vh - var(--navbar-height));
+  background: var(--color-primary);
+  color: #ecf0f1;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  z-index: 1040;
+}
+
+.sidebar.hidden {
+  transform: translateX(-100%);
+}
+
+.sidebar .nav-link {
+  color: #bdc3c7;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  font-size: 0.9rem;
+}
+
+.sidebar .nav-link:hover {
+  background: var(--color-secondary);
+  color: #ffffff;
+}
+
+.sidebar .nav-link.active {
+  background: rgba(52, 152, 219, 0.15);
+  color: var(--color-accent);
+  border-left-color: var(--color-accent);
+}
+
+.sidebar .nav-link i {
+  font-size: 1.1rem;
+  width: 22px;
+  text-align: center;
+}
+
+.sidebar-header {
+  padding: 1.25rem 1.25rem 0.75rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #7f8c8d;
+  font-weight: 600;
+}
+
+/* ---- Navbar ---- */
+.top-navbar {
+  height: var(--navbar-height);
+  background: var(--color-card);
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: var(--shadow-sm);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+}
+
+/* ---- Cards y componentes ---- */
+.stat-card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+  transition: box-shadow 0.2s;
+  border: 1px solid #eee;
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card .stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.stat-card .stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-card .stat-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---- Auth pages ---- */
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  padding: 1rem;
+}
+
+.auth-card {
+  background: var(--color-card);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-card .brand-logo {
+  width: 56px;
+  height: 56px;
+  background: var(--color-accent);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.auth-card h2 {
+  font-weight: 700;
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.auth-card .subtitle {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-card .form-control {
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid #ddd;
+  transition: border-color 0.2s;
+}
+
+.auth-card .form-control:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+}
+
+.auth-card .btn-primary {
+  background: var(--color-accent);
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.auth-card .btn-primary:hover {
+  background: #2980b9;
+}
+
+/* ---- Tablas ---- */
+.table-wrapper {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #eee;
+  overflow: hidden;
+}
+
+.table-wrapper .table {
+  margin-bottom: 0;
+}
+
+.table-wrapper .table thead {
+  background: #f8f9fa;
+}
+
+.table-wrapper .table thead th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  border-bottom: 2px solid #eee;
+  padding: 0.85rem 1rem;
+}
+
+.table-wrapper .table tbody td {
+  padding: 0.85rem 1rem;
+  vertical-align: middle;
+}
+
+/* ---- Badges de estado ---- */
+.badge-stock {
+  padding: 0.3rem 0.65rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-stock.in-stock {
+  background: rgba(39, 174, 96, 0.12);
+  color: var(--color-success);
+}
+
+.badge-stock.low-stock {
+  background: rgba(243, 156, 18, 0.12);
+  color: var(--color-warning);
+}
+
+.badge-stock.out-of-stock {
+  background: rgba(231, 76, 60, 0.12);
+  color: var(--color-danger);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.show-mobile {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+}
