@@ -1,11 +1,13 @@
 /**
- * @fileoverview Página de listado de productos con búsqueda, filtros y carga progresiva.
+ * @fileoverview Página de listado de productos con búsqueda, filtros, ordenamiento por columna,
+ * carga progresiva y exportación PDF.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getProducts, deleteProduct } from '../services/product.service';
 import { addActivity } from '../services/activity.service';
+import { generateInventoryPDF } from '../services/pdf.service';
 import toast, { Toaster } from 'react-hot-toast';
 
 /** Cantidad de productos que se muestran por cada carga */
@@ -15,16 +17,58 @@ const PAGE_SIZE = 10;
  * Determina la clase CSS del badge según el nivel de stock.
  * @param {number} stock - Cantidad actual en stock.
  * @param {number} minStock - Cantidad mínima requerida.
- * @returns {Object} Objeto con clase CSS y texto del badge.
+ * @returns {Object} Objeto con clase CSS, texto y orden numérico del badge.
  */
 function getStockBadge(stock, minStock) {
-  if (stock === 0) return { className: 'out-of-stock', text: 'Sin stock' };
-  if (stock <= minStock) return { className: 'low-stock', text: 'Stock bajo' };
-  return { className: 'in-stock', text: 'Disponible' };
+  if (stock === 0) return { className: 'out-of-stock', text: 'Sin stock', order: 0 };
+  if (stock <= minStock) return { className: 'low-stock', text: 'Stock bajo', order: 1 };
+  return { className: 'in-stock', text: 'Disponible', order: 2 };
 }
 
 /**
- * Tabla de productos con búsqueda, filtros por categoría, eliminación y carga progresiva.
+ * Ordena un array de productos según columna y dirección.
+ * @param {Array} items - Productos a ordenar.
+ * @param {string} key - Columna de ordenamiento.
+ * @param {string} dir - Dirección: 'asc' o 'desc'.
+ * @returns {Array} Productos ordenados.
+ */
+function sortProducts(items, key, dir) {
+  const m = dir === 'asc' ? 1 : -1;
+  return [...items].sort((a, b) => {
+    switch (key) {
+      case 'name':
+        return m * a.name.localeCompare(b.name, 'es');
+      case 'sku':
+        return m * a.sku.localeCompare(b.sku, 'es');
+      case 'category':
+        return m * a.category.localeCompare(b.category, 'es');
+      case 'price':
+        return m * (a.price - b.price);
+      case 'stock':
+        return m * (a.stock - b.stock);
+      case 'status':
+        return m * (getStockBadge(a.stock, a.minStock).order - getStockBadge(b.stock, b.minStock).order);
+      case 'createdAt':
+        return m * (new Date(a.createdAt) - new Date(b.createdAt));
+      default:
+        return 0;
+    }
+  });
+}
+
+/** Columnas disponibles para ordenamiento */
+const COLUMNS = [
+  { key: 'name', label: 'Producto' },
+  { key: 'sku', label: 'SKU' },
+  { key: 'category', label: 'Categoría' },
+  { key: 'price', label: 'Precio', align: 'text-end' },
+  { key: 'stock', label: 'Stock', align: 'text-center' },
+  { key: 'status', label: 'Estado', align: 'text-center' },
+  { key: 'createdAt', label: 'Registro' },
+];
+
+/**
+ * Tabla de productos con búsqueda, filtros, ordenamiento, eliminación, carga progresiva y exportación PDF.
  * @returns {JSX.Element}
  */
 export default function ProductsPage() {
@@ -32,28 +76,18 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [selected, setSelected] = useState(new Set());
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortDir, setSortDir] = useState('desc');
 
   useEffect(() => {
-    loadProducts();
+    getProducts()
+      .then(setProducts)
+      .catch(() => toast.error('Error al cargar productos'))
+      .finally(() => setLoading(false));
   }, []);
-
-  /** Reinicia la cantidad visible cuando cambian los filtros */
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [search, categoryFilter]);
-
-  /** Carga la lista de productos desde el servicio. */
-  async function loadProducts() {
-    try {
-      const data = await getProducts();
-      setProducts(data);
-    } catch (err) {
-      toast.error('Error al cargar productos');
-    } finally {
-      setLoading(false);
-    }
-  }
 
   /**
    * Elimina un producto después de confirmación.
@@ -65,6 +99,11 @@ export default function ProductsPage() {
     try {
       await deleteProduct(id);
       setProducts((prev) => prev.filter((p) => p.id !== id));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       addActivity(`Producto eliminado: ${name}`, 'delete');
       toast.success('Producto eliminado');
     } catch (err) {
@@ -72,28 +111,90 @@ export default function ProductsPage() {
     }
   }
 
-  /** Muestra el siguiente bloque de productos */
-  const loadMore = useCallback(() => {
-    setVisibleCount((prev) => prev + PAGE_SIZE);
-  }, []);
+  /**
+   * Cambia la columna de ordenamiento. Si ya está activa, invierte la dirección.
+   * @param {string} key - Clave de la columna.
+   */
+  function handleSort(key) {
+    if (sortBy === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(key);
+      setSortDir(key === 'createdAt' ? 'desc' : 'asc');
+    }
+  }
 
-  /** Categorías únicas extraídas de los productos cargados */
+  /**
+   * Alterna la selección de un producto individual.
+   * @param {string} id
+   */
+  function toggleSelect(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  /** Selecciona o deselecciona todos los productos filtrados */
+  function toggleSelectAll() {
+    const allFilteredIds = filtered.map((p) => p.id);
+    const allSelected = allFilteredIds.every((id) => selected.has(id));
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(allFilteredIds));
+    }
+  }
+
+  /** Genera y descarga el PDF con los productos seleccionados */
+  function handleDownloadPDF() {
+    const selectedProducts = filtered.filter((p) => selected.has(p.id));
+    if (selectedProducts.length === 0) {
+      toast.error('Selecciona al menos un producto para generar el reporte');
+      return;
+    }
+    generateInventoryPDF(selectedProducts);
+    addActivity(`Reporte PDF descargado (${selectedProducts.length} productos)`, 'info');
+    toast.success(`Reporte generado con ${selectedProducts.length} producto(s)`);
+  }
+
+  /** Retorna el ícono de dirección de ordenamiento para una columna */
+  function getSortIcon(key) {
+    if (sortBy !== key) return 'bi-arrow-down-up opacity-25';
+    return sortDir === 'asc' ? 'bi-sort-up' : 'bi-sort-down';
+  }
+
+  /** Categorías únicas */
   const categories = [...new Set(products.map((p) => p.category))];
 
-  /** Productos filtrados por búsqueda y categoría, ordenados del más reciente al más antiguo */
-  const filtered = products
-    .filter((p) => {
+  /** Productos filtrados por búsqueda, categoría y estado, luego ordenados */
+  const filtered = sortProducts(
+    products.filter((p) => {
       const matchSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase());
       const matchCategory = !categoryFilter || p.category === categoryFilter;
-      return matchSearch && matchCategory;
-    })
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const matchStatus = !statusFilter || getStockBadge(p.stock, p.minStock).text === statusFilter;
+      return matchSearch && matchCategory && matchStatus;
+    }),
+    sortBy,
+    sortDir
+  );
 
-  /** Subconjunto visible de los productos filtrados */
+  /** Subconjunto visible */
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
+  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
+
+  /** Reinicia paginación cuando cambian filtros */
+  const handleSearchChange = (e) => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE); };
+  const handleCategoryChange = (e) => { setCategoryFilter(e.target.value); setVisibleCount(PAGE_SIZE); };
+  const handleStatusChange = (e) => { setStatusFilter(e.target.value); setVisibleCount(PAGE_SIZE); };
 
   return (
     <div>
@@ -104,15 +205,26 @@ export default function ProductsPage() {
           <h4 className="fw-bold mb-1">Productos</h4>
           <p className="text-muted mb-0 small">{products.length} productos registrados</p>
         </div>
-        <Link to="/products/new" className="btn btn-primary btn-sm d-flex align-items-center gap-2">
-          <i className="bi bi-plus-lg"></i>
-          Nuevo Producto
-        </Link>
+        <div className="d-flex gap-2">
+          {selected.size > 0 && (
+            <button
+              className="btn btn-danger btn-sm d-flex align-items-center gap-2"
+              onClick={handleDownloadPDF}
+            >
+              <i className="bi bi-file-earmark-pdf"></i>
+              Descargar PDF ({selected.size})
+            </button>
+          )}
+          <Link to="/products/new" className="btn btn-primary btn-sm d-flex align-items-center gap-2">
+            <i className="bi bi-plus-lg"></i>
+            Nuevo Producto
+          </Link>
+        </div>
       </div>
 
       {/* Barra de búsqueda y filtros */}
       <div className="row g-2 mb-3">
-        <div className="col-md-6">
+        <div className="col-md-5">
           <div className="input-group input-group-sm">
             <span className="input-group-text bg-white">
               <i className="bi bi-search text-muted"></i>
@@ -122,7 +234,7 @@ export default function ProductsPage() {
               className="form-control"
               placeholder="Buscar por nombre o SKU..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={handleSearchChange}
             />
           </div>
         </div>
@@ -130,12 +242,24 @@ export default function ProductsPage() {
           <select
             className="form-select form-select-sm"
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={handleCategoryChange}
           >
             <option value="">Todas las categorías</option>
             {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
+          </select>
+        </div>
+        <div className="col-md-3">
+          <select
+            className="form-select form-select-sm"
+            value={statusFilter}
+            onChange={handleStatusChange}
+          >
+            <option value="">Todos los estados</option>
+            <option value="Disponible">Disponible</option>
+            <option value="Stock bajo">Stock bajo</option>
+            <option value="Sin stock">Sin stock</option>
           </select>
         </div>
       </div>
@@ -158,21 +282,46 @@ export default function ProductsPage() {
               <table className="table table-hover">
                 <thead>
                   <tr>
-                    <th>Producto</th>
-                    <th>SKU</th>
-                    <th>Categoría</th>
-                    <th className="text-end">Precio</th>
-                    <th className="text-center">Stock</th>
-                    <th className="text-center">Estado</th>
-                    <th>Registro</th>
+                    <th className="text-center" style={{ width: 40 }}>
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={allFilteredSelected}
+                        onChange={toggleSelectAll}
+                        title="Seleccionar todos"
+                      />
+                    </th>
+                    {COLUMNS.map((col) => (
+                      <th
+                        key={col.key}
+                        className={col.align || ''}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort(col.key)}
+                      >
+                        {col.label}
+                        <i className={`bi ${getSortIcon(col.key)} ms-1`} style={{ fontSize: '0.7rem' }}></i>
+                      </th>
+                    ))}
                     <th className="text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visible.map((product) => {
                     const badge = getStockBadge(product.stock, product.minStock);
+                    const isSelected = selected.has(product.id);
                     return (
-                      <tr key={product.id}>
+                      <tr
+                        key={product.id}
+                        className={isSelected ? 'table-active' : ''}
+                      >
+                        <td className="text-center">
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(product.id)}
+                          />
+                        </td>
                         <td>
                           <div className="fw-semibold">{product.name}</div>
                           <div className="text-muted" style={{ fontSize: '0.75rem' }}>
@@ -228,11 +377,14 @@ export default function ProductsPage() {
           <div className="d-flex justify-content-between align-items-center mt-3">
             <span className="text-muted small">
               Mostrando {visible.length} de {filtered.length} productos
+              {selected.size > 0 && (
+                <> · <strong>{selected.size} seleccionado(s)</strong></>
+              )}
             </span>
             {hasMore && (
               <button
                 className="btn btn-outline-primary btn-sm"
-                onClick={loadMore}
+                onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
               >
                 <i className="bi bi-arrow-down-circle me-1"></i>
                 Cargar más ({Math.min(PAGE_SIZE, filtered.length - visibleCount)} restantes)
