@@ -1,12 +1,15 @@
 /**
- * @fileoverview Página de listado de productos con búsqueda y filtros.
+ * @fileoverview Página de listado de productos con búsqueda, filtros y carga progresiva.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getProducts, deleteProduct } from '../services/product.service';
 import { addActivity } from '../services/activity.service';
 import toast, { Toaster } from 'react-hot-toast';
+
+/** Cantidad de productos que se muestran por cada carga */
+const PAGE_SIZE = 10;
 
 /**
  * Determina la clase CSS del badge según el nivel de stock.
@@ -21,7 +24,7 @@ function getStockBadge(stock, minStock) {
 }
 
 /**
- * Tabla de productos con búsqueda, filtros por categoría y eliminación.
+ * Tabla de productos con búsqueda, filtros por categoría, eliminación y carga progresiva.
  * @returns {JSX.Element}
  */
 export default function ProductsPage() {
@@ -29,10 +32,16 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     loadProducts();
   }, []);
+
+  /** Reinicia la cantidad visible cuando cambian los filtros */
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [search, categoryFilter]);
 
   /** Carga la lista de productos desde el servicio. */
   async function loadProducts() {
@@ -63,17 +72,28 @@ export default function ProductsPage() {
     }
   }
 
+  /** Muestra el siguiente bloque de productos */
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => prev + PAGE_SIZE);
+  }, []);
+
   /** Categorías únicas extraídas de los productos cargados */
   const categories = [...new Set(products.map((p) => p.category))];
 
-  /** Productos filtrados por búsqueda y categoría */
-  const filtered = products.filter((p) => {
-    const matchSearch =
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = !categoryFilter || p.category === categoryFilter;
-    return matchSearch && matchCategory;
-  });
+  /** Productos filtrados por búsqueda y categoría, ordenados del más reciente al más antiguo */
+  const filtered = products
+    .filter((p) => {
+      const matchSearch =
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.sku.toLowerCase().includes(search.toLowerCase());
+      const matchCategory = !categoryFilter || p.category === categoryFilter;
+      return matchSearch && matchCategory;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  /** Subconjunto visible de los productos filtrados */
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
 
   return (
     <div>
@@ -132,62 +152,94 @@ export default function ProductsPage() {
           <p className="text-muted mt-2">No se encontraron productos</p>
         </div>
       ) : (
-        <div className="table-wrapper">
-          <div className="table-responsive">
-            <table className="table table-hover">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>SKU</th>
-                  <th>Categoría</th>
-                  <th className="text-end">Precio</th>
-                  <th className="text-center">Stock</th>
-                  <th className="text-center">Estado</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((product) => {
-                  const badge = getStockBadge(product.stock, product.minStock);
-                  return (
-                    <tr key={product.id}>
-                      <td>
-                        <div className="fw-semibold">{product.name}</div>
-                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>
-                          {product.description?.substring(0, 50)}...
-                        </div>
-                      </td>
-                      <td>
-                        <code className="small">{product.sku}</code>
-                      </td>
-                      <td>{product.category}</td>
-                      <td className="text-end fw-semibold">
-                        ${product.price.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="text-center">{product.stock}</td>
-                      <td className="text-center">
-                        <span className={`badge-stock ${badge.className}`}>
-                          {badge.text}
-                        </span>
-                      </td>
-                      <td className="text-center">
-                        <div className="btn-group btn-group-sm">
-                          <button
-                            className="btn btn-outline-danger"
-                            title="Eliminar"
-                            onClick={() => handleDelete(product.id, product.name)}
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <>
+          <div className="table-wrapper">
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>SKU</th>
+                    <th>Categoría</th>
+                    <th className="text-end">Precio</th>
+                    <th className="text-center">Stock</th>
+                    <th className="text-center">Estado</th>
+                    <th>Registro</th>
+                    <th className="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((product) => {
+                    const badge = getStockBadge(product.stock, product.minStock);
+                    return (
+                      <tr key={product.id}>
+                        <td>
+                          <div className="fw-semibold">{product.name}</div>
+                          <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                            {product.description?.substring(0, 50)}...
+                          </div>
+                        </td>
+                        <td>
+                          <code className="small">{product.sku}</code>
+                        </td>
+                        <td>{product.category}</td>
+                        <td className="text-end fw-semibold">
+                          ${product.price.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="text-center">{product.stock}</td>
+                        <td className="text-center">
+                          <span className={`badge-stock ${badge.className}`}>
+                            {badge.text}
+                          </span>
+                        </td>
+                        <td className="small text-muted">
+                          {new Date(product.createdAt).toLocaleDateString('es-MX', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                          <br />
+                          {new Date(product.createdAt).toLocaleTimeString('es-MX', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}
+                        </td>
+                        <td className="text-center">
+                          <div className="btn-group btn-group-sm">
+                            <button
+                              className="btn btn-outline-danger"
+                              title="Eliminar"
+                              onClick={() => handleDelete(product.id, product.name)}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* Indicador de productos mostrados y botón de cargar más */}
+          <div className="d-flex justify-content-between align-items-center mt-3">
+            <span className="text-muted small">
+              Mostrando {visible.length} de {filtered.length} productos
+            </span>
+            {hasMore && (
+              <button
+                className="btn btn-outline-primary btn-sm"
+                onClick={loadMore}
+              >
+                <i className="bi bi-arrow-down-circle me-1"></i>
+                Cargar más ({Math.min(PAGE_SIZE, filtered.length - visibleCount)} restantes)
+              </button>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

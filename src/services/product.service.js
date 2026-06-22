@@ -139,7 +139,7 @@ export async function createProduct(data) {
     const newProduct = {
       ...data,
       id: String(Date.now()),
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
     };
     MOCK_PRODUCTS.push(newProduct);
     return newProduct;

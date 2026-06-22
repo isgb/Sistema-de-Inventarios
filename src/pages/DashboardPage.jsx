@@ -97,7 +97,7 @@ export default function DashboardPage() {
       ) : (
         <div className="row g-3 mb-4">
           {statCards.map((card) => (
-            <div key={card.label} className="col-sm-6 col-lg-4 col-xl-2">
+            <div key={card.label} className="col-6 col-lg-4 col-xl-2">
               <div className="stat-card">
                 <div className="d-flex align-items-center gap-3 mb-2">
                   <div
