@@ -4,10 +4,10 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { getProducts, deleteProduct } from '../services/product.service';
 import { addActivity } from '../services/activity.service';
 import { generateInventoryPDF } from '../services/pdf.service';
+import ProductsHeader from '../components/common/ProductsHeader';
 import toast, { Toaster } from 'react-hot-toast';
 
 /** Cantidad de productos que se muestran por cada carga */
@@ -81,6 +81,8 @@ export default function ProductsPage() {
   const [selected, setSelected] = useState(new Set());
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     getProducts()
@@ -180,7 +182,10 @@ export default function ProductsPage() {
         p.sku.toLowerCase().includes(search.toLowerCase());
       const matchCategory = !categoryFilter || p.category === categoryFilter;
       const matchStatus = !statusFilter || getStockBadge(p.stock, p.minStock).text === statusFilter;
-      return matchSearch && matchCategory && matchStatus;
+      const productDate = new Date(p.createdAt);
+      const matchDateFrom = !dateFrom || productDate >= new Date(dateFrom + 'T00:00:00');
+      const matchDateTo = !dateTo || productDate <= new Date(dateTo + 'T23:59:59');
+      return matchSearch && matchCategory && matchStatus && matchDateFrom && matchDateTo;
     }),
     sortBy,
     sortDir
@@ -195,36 +200,24 @@ export default function ProductsPage() {
   const handleSearchChange = (e) => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE); };
   const handleCategoryChange = (e) => { setCategoryFilter(e.target.value); setVisibleCount(PAGE_SIZE); };
   const handleStatusChange = (e) => { setStatusFilter(e.target.value); setVisibleCount(PAGE_SIZE); };
+  const handleDateFromChange = (e) => { setDateFrom(e.target.value); setVisibleCount(PAGE_SIZE); };
+  const handleDateToChange = (e) => { setDateTo(e.target.value); setVisibleCount(PAGE_SIZE); };
+  const clearDateFilter = () => { setDateFrom(''); setDateTo(''); setVisibleCount(PAGE_SIZE); };
 
   return (
     <div>
+      
       <Toaster position="top-center" />
 
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h4 className="fw-bold mb-1">Productos</h4>
-          <p className="text-muted mb-0 small">{products.length} productos registrados</p>
-        </div>
-        <div className="d-flex gap-2">
-          {selected.size > 0 && (
-            <button
-              className="btn btn-danger btn-sm d-flex align-items-center gap-2"
-              onClick={handleDownloadPDF}
-            >
-              <i className="bi bi-file-earmark-pdf"></i>
-              Descargar PDF ({selected.size})
-            </button>
-          )}
-          <Link to="/products/new" className="btn btn-primary btn-sm d-flex align-items-center gap-2">
-            <i className="bi bi-plus-lg"></i>
-            Nuevo Producto
-          </Link>
-        </div>
-      </div>
+      <ProductsHeader
+        totalProducts={products.length}
+        selectedCount={selected.size}
+        onDownloadPDF={handleDownloadPDF}
+      />
 
       {/* Barra de búsqueda y filtros */}
       <div className="row g-2 mb-3">
-        <div className="col-md-5">
+        <div className="col-md-4">
           <div className="input-group input-group-sm">
             <span className="input-group-text bg-white">
               <i className="bi bi-search text-muted"></i>
@@ -238,19 +231,19 @@ export default function ProductsPage() {
             />
           </div>
         </div>
-        <div className="col-md-3">
+        <div className="col-md-2">
           <select
             className="form-select form-select-sm"
             value={categoryFilter}
             onChange={handleCategoryChange}
           >
-            <option value="">Todas las categorías</option>
+            <option value="">Categoría</option>
             {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
         </div>
-        <div className="col-md-3">
+        <div className="col-md-2">
           <select
             className="form-select form-select-sm"
             value={statusFilter}
@@ -262,6 +255,43 @@ export default function ProductsPage() {
             <option value="Sin stock">Sin stock</option>
           </select>
         </div>
+      </div>
+
+      {/* Filtro por rango de fechas */}
+      <div className="row g-2 mb-3">
+        <div className="col-md-3">
+          <div className="input-group input-group-sm">
+            <span className="input-group-text bg-white small">Desde</span>
+            <input
+              type="date"
+              className="form-control"
+              value={dateFrom}
+              onChange={handleDateFromChange}
+            />
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="input-group input-group-sm">
+            <span className="input-group-text bg-white small">Hasta</span>
+            <input
+              type="date"
+              className="form-control"
+              value={dateTo}
+              onChange={handleDateToChange}
+            />
+          </div>
+        </div>
+        {(dateFrom || dateTo) && (
+          <div className="col-auto">
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={clearDateFilter}
+            >
+              <i className="bi bi-x-lg me-1"></i>
+              Limpiar fechas
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabla de productos */}
