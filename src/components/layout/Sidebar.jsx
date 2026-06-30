@@ -1,38 +1,29 @@
 /**
- * @fileoverview Barra lateral de navegación.
- * Contiene los enlaces principales del sistema.
+ * @fileoverview Barra lateral de navegación con visibilidad por roles RBAC.
+ * Los ítems del menú se muestran según los roles del usuario autenticado.
  */
 
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
-/** Elementos del menú de navegación */
-const NAV_ITEMS = [
-  { path: '/', icon: 'bi-speedometer2', label: 'Dashboard' },
-  { path: '/products', icon: 'bi-box-seam', label: 'Productos' },
-  { path: '/products/new', icon: 'bi-plus-circle', label: 'Nuevo Producto' },
-];
-
-/**
- * Sidebar de navegación lateral.
- * @param {Object} props
- * @param {boolean} props.collapsed - Si el sidebar está oculto.
- * @param {Function} props.onClose - Callback para cerrar en mobile.
- * @returns {JSX.Element}
- */
 export default function Sidebar({ collapsed, onClose }) {
-  const sidebarClass = [
-    'sidebar',
-    collapsed && 'hidden',
-    !collapsed && 'show-mobile',
-  ]
+  const { hasRole } = useAuth();
+
+  const navItems = [
+    { path: '/', icon: 'bi-speedometer2', label: 'Dashboard', show: true },
+    { path: '/products', icon: 'bi-box-seam', label: 'Productos', show: true },
+    { path: '/products/new', icon: 'bi-plus-circle', label: 'Nuevo Producto', show: hasRole('ADMIN', 'SUPER_ADMIN') },
+    { path: '/categories', icon: 'bi-tags', label: 'Categorías', show: true },
+    { path: '/movements', icon: 'bi-arrow-left-right', label: 'Movimientos', show: true },
+    { path: '/users', icon: 'bi-people', label: 'Usuarios', show: hasRole('ADMIN', 'SUPER_ADMIN') },
+  ];
+
+  const sidebarClass = ['sidebar', collapsed && 'hidden', !collapsed && 'show-mobile']
     .filter(Boolean)
     .join(' ');
 
-  /** Solo cierra el sidebar en pantallas mobile (< 768px) */
   const handleNavClick = () => {
-    if (window.innerWidth < 768) {
-      onClose();
-    }
+    if (window.innerWidth < 768) onClose();
   };
 
   return (
@@ -48,31 +39,18 @@ export default function Sidebar({ collapsed, onClose }) {
       <aside className={sidebarClass}>
         <div className="sidebar-header">Menú principal</div>
         <nav className="nav flex-column">
-          {NAV_ITEMS.map((item) => (
+          {navItems.filter((item) => item.show).map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.path === '/'}
-              className={({ isActive }) =>
-                `nav-link ${isActive ? 'active' : ''}`
-              }
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
               onClick={handleNavClick}
             >
               <i className={`bi ${item.icon}`}></i>
               {item.label}
             </NavLink>
           ))}
-        </nav>
-
-        <div className="sidebar-header mt-4">Sistema</div>
-        <nav className="nav flex-column">
-          <span className="nav-link" style={{ cursor: 'default', opacity: 0.5 }}>
-            <i className="bi bi-gear"></i>
-            Configuración
-            <span className="badge bg-secondary ms-auto" style={{ fontSize: '0.65rem' }}>
-              Pronto
-            </span>
-          </span>
         </nav>
       </aside>
     </>

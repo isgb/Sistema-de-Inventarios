@@ -1,26 +1,15 @@
 /**
- * @fileoverview Barra de navegación superior.
- * Muestra logo, botón toggle del sidebar y menú de usuario.
+ * @fileoverview Barra de navegación superior con info del usuario y rol.
  */
 
 import { useAuth } from '../../hooks/useAuth';
 
-/**
- * Navbar superior fija.
- * @param {Object} props
- * @param {Function} props.onToggleSidebar - Callback para mostrar/ocultar sidebar.
- * @returns {JSX.Element}
- */
 export default function Navbar({ onToggleSidebar }) {
-  const { user, logout } = useAuth();
+  const { user, roles, logout } = useAuth();
 
   return (
     <nav className="top-navbar">
-      <button
-        className="btn btn-link text-dark p-1 me-3"
-        onClick={onToggleSidebar}
-        aria-label="Toggle sidebar"
-      >
+      <button className="btn btn-link text-dark p-1 me-3" onClick={onToggleSidebar} aria-label="Toggle sidebar">
         <i className="bi bi-list fs-4"></i>
       </button>
 
@@ -33,11 +22,7 @@ export default function Navbar({ onToggleSidebar }) {
         <button
           className="btn btn-light btn-sm dropdown-toggle d-flex align-items-center gap-2"
           type="button"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-          onClick={(e) => {
-            e.currentTarget.nextElementSibling.classList.toggle('show');
-          }}
+          onClick={(e) => e.currentTarget.nextElementSibling.classList.toggle('show')}
         >
           <div
             className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
@@ -49,15 +34,19 @@ export default function Navbar({ onToggleSidebar }) {
         </button>
         <ul className="dropdown-menu dropdown-menu-end">
           <li>
-            <span className="dropdown-item-text small text-muted">
-              {user?.email}
+            <span className="dropdown-item-text small text-muted">{user?.email}</span>
+          </li>
+          <li>
+            <span className="dropdown-item-text small">
+              {(roles || []).map((role) => (
+                <span key={role} className="badge bg-primary me-1" style={{ fontSize: '0.65rem' }}>{role}</span>
+              ))}
             </span>
           </li>
           <li><hr className="dropdown-divider" /></li>
           <li>
             <button className="dropdown-item text-danger" onClick={logout}>
-              <i className="bi bi-box-arrow-right me-2"></i>
-              Cerrar sesión
+              <i className="bi bi-box-arrow-right me-2"></i>Cerrar sesión
             </button>
           </li>
         </ul>

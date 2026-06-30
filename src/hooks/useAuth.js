@@ -1,21 +1,22 @@
 /**
- * @fileoverview Hook personalizado para acceder al contexto de autenticación.
+ * @fileoverview Hook para acceder al contexto de autenticación y roles.
  */
 
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 /**
- * Hook que retorna el estado y acciones de autenticación.
+ * Retorna el estado de autenticación, roles y acciones.
  * @returns {{
  *   user: Object|null,
+ *   roles: string[],
  *   loading: boolean,
  *   isAuthenticated: boolean,
  *   login: Function,
  *   register: Function,
- *   logout: Function
+ *   logout: Function,
+ *   hasRole: (...roles: string[]) => boolean
  * }}
- * @throws {Error} Si se usa fuera de un AuthProvider.
  */
 export function useAuth() {
   const context = useContext(AuthContext);

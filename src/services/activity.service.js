@@ -1,52 +1,18 @@
 /**
- * @fileoverview Servicio de registro de actividad en memoria.
- * Almacena eventos del sistema (crear producto, eliminar, stock bajo, etc.)
- * para mostrarlos en el dashboard como "Actividad Reciente".
- *
- * Los eventos se guardan en localStorage para que persistan entre recargas
- * de la sesión. Cuando el backend esté disponible, reemplazar por llamadas API.
+ * @fileoverview Servicio de actividad reciente conectado al backend real.
+ * Reemplaza el log anterior basado en localStorage: ahora la actividad
+ * se registra automáticamente en el backend (product/category/movement/user/role
+ * services) y se consulta vía GET /api/activity, compartida entre todos los usuarios.
  */
 
-const STORAGE_KEY = 'activity_log';
-const MAX_EVENTS = 20;
+import api from './api';
 
 /**
- * @typedef {Object} ActivityEvent
- * @property {string} id - Identificador único del evento.
- * @property {string} text - Descripción legible del evento.
- * @property {'create'|'delete'|'update'|'warning'|'info'} type - Tipo de evento.
- * @property {string} timestamp - Fecha/hora ISO del evento.
+ * Obtiene los eventos de actividad recientes compartidos por todos los usuarios.
+ * @returns {Promise<Array<{ _id: string, action: string, type: string, createdAt: string, user: { name: string } }>>}
  */
-
-/**
- * Obtiene todos los eventos de actividad ordenados del más reciente al más antiguo.
- * @returns {ActivityEvent[]}
- */
-export function getActivities() {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Registra un nuevo evento de actividad.
- * @param {string} text - Descripción del evento.
- * @param {'create'|'delete'|'update'|'warning'|'info'} type - Tipo del evento.
- */
-export function addActivity(text, type = 'info') {
-  const events = getActivities();
-  const newEvent = {
-    id: crypto.randomUUID(),
-    text,
-    type,
-    timestamp: new Date().toISOString(),
-  };
-  events.unshift(newEvent);
-  if (events.length > MAX_EVENTS) events.length = MAX_EVENTS;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+export async function getActivities() {
+  return api.get('/activity');
 }
 
 /**
