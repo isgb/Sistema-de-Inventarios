@@ -67,10 +67,10 @@ frontend/src/
 - **Autenticación**: login, registro, JWT en localStorage, logout, rutas protegidas, expulsión automática a `/login` si el token expira o es inválido (401).
 - **RBAC en UI**: visibilidad de menús y acciones según rol (`SUPER_ADMIN`, `ADMIN`, `MANAGER`, `USER`), sincronizada con los permisos reales del backend.
 - **Dashboard**: 7 KPIs (productos, stock, valor de inventario, stock bajo, sin stock, categorías, movimientos recientes), gráfica de movimientos por tipo con filtro de fecha (Hoy/7d/30d/Todo), actividad reciente compartida entre usuarios.
-- **Productos**: tabla paginada server-side con búsqueda, filtro por categoría/estado y orden por columna; crear, editar y eliminar; exportar inventario completo a Excel; importar productos desde Excel con preview de validación antes de confirmar; exportar PDF de los productos seleccionados.
-- **Categorías**: tabla con búsqueda, crear, renombrar (edición inline) y activar/desactivar.
+- **Productos**: tabla paginada server-side con búsqueda, filtro por categoría/estado y orden por columna; crear, editar y eliminar; exportar inventario completo a Excel; importar productos desde Excel con preview de validación antes de confirmar; exportar PDF de los productos seleccionados. Los productos del seed (SKU con prefijo `SEED-`) no se pueden eliminar — el backend responde 403 y se muestra como toast de error.
+- **Categorías**: tabla con búsqueda, crear, renombrar (edición inline) y activar/desactivar. Las categorías del seed no se pueden desactivar (403 → toast).
 - **Movimientos**: registrar entradas/salidas/ajustes de stock; tabla paginada con filtros por producto, tipo y rango de fechas.
-- **Usuarios**: tabla paginada, crear usuario con rol inicial, edición inline (nombre/email/contraseña/estado), asignar y revocar roles (solo `SUPER_ADMIN`, mismo permiso que exige el backend).
+- **Usuarios**: tabla paginada, crear usuario con rol inicial, edición inline (nombre/email/contraseña/estado), asignar y revocar roles (solo `SUPER_ADMIN`). Los usuarios del seed no se pueden pasar a `inactive` ni `blocked` (403 → toast).
 - **Layout**: Navbar fija + sidebar colapsable con menú filtrado por rol, responsive.
 
 ## Credenciales de prueba
