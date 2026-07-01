@@ -12,7 +12,6 @@ export default function Sidebar({ collapsed, onClose }) {
   const navItems = [
     { path: '/', icon: 'bi-speedometer2', label: 'Dashboard', show: true },
     { path: '/products', icon: 'bi-box-seam', label: 'Productos', show: true },
-    { path: '/products/new', icon: 'bi-plus-circle', label: 'Nuevo Producto', show: hasRole('ADMIN', 'SUPER_ADMIN') },
     { path: '/categories', icon: 'bi-tags', label: 'Categorías', show: true },
     { path: '/movements', icon: 'bi-arrow-left-right', label: 'Movimientos', show: true },
     { path: '/users', icon: 'bi-people', label: 'Usuarios', show: hasRole('ADMIN', 'SUPER_ADMIN') },
